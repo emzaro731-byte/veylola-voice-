@@ -29,7 +29,7 @@ jobs:
           cache: true
       - name: Generate Android project files
         run: flutter create --platforms=android --org com.veylola --project-name veylola_voice .
-      - name: Add Android permissions
+      - name: Configure Android background voice service
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -46,16 +46,19 @@ jobs:
           for permission in permissions:
               line = f'<uses-permission android:name="{permission}" />'
               if line not in s:
-                  s = s.replace("<application", f"    {line}\\n    <application", 1)
+                  s = s.replace("<application", f"    {line}\n    <application", 1)
+          service = '    <service android:name=".WakeWordService" android:exported="false" android:foregroundServiceType="microphone" />'
+          if 'android:name=".WakeWordService"' not in s:
+              s = s.replace("</application>", service + "\n</application>")
           p.write_text(s)
           PY
-      - name: Install Android foreground voice service
-        run: |
           mkdir -p android/app/src/main/kotlin/com/veylola/veylola_voice
           cat > android/app/src/main/kotlin/com/veylola/veylola_voice/MainActivity.kt <<'EOF'
           package com.veylola.veylola_voice
           import android.content.Intent
+          import android.net.Uri
           import android.os.Build
+          import android.provider.Settings
           import io.flutter.embedding.android.FlutterActivity
           import io.flutter.embedding.engine.FlutterEngine
           import io.flutter.plugin.common.MethodChannel
@@ -63,15 +66,25 @@ jobs:
             override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
               super.configureFlutterEngine(flutterEngine)
               MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.veylola.veylola_voice/background").setMethodCallHandler { call, result ->
-                when (call.method) {
-                  "start" -> {
-                    val intent = Intent(this, WakeWordService::class.java)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
-                    result.success(true)
+                try {
+                  when (call.method) {
+                    "start" -> {
+                      val intent = Intent(this, WakeWordService::class.java)
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
+                      result.success(true)
+                    }
+                    "stop" -> { stopService(Intent(this, WakeWordService::class.java)); result.success(true) }
+                    "batterySettings" -> {
+                      startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                      result.success(true)
+                    }
+                    "appSettings" -> {
+                      startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + packageName)))
+                      result.success(true)
+                    }
+                    else -> result.notImplemented()
                   }
-                  "stop" -> { stopService(Intent(this, WakeWordService::class.java)); result.success(true) }
-                  else -> result.notImplemented()
-                }
+                } catch (e: Exception) { result.error("ANDROID_ACTION_FAILED", e.message, null) }
               }
             }
           }
@@ -84,6 +97,7 @@ jobs:
           import android.app.PendingIntent
           import android.app.Service
           import android.content.Intent
+          import android.content.pm.ServiceInfo
           import android.os.Build
           import android.os.Bundle
           import android.os.Handler
@@ -97,18 +111,34 @@ jobs:
             private var recognizer: SpeechRecognizer? = null
             private val handler = Handler(Looper.getMainLooper())
             private var stopped = false
+            private var retryCount = 0
+            override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
             override fun onCreate() {
               super.onCreate()
               val manager = getSystemService(NotificationManager::class.java)
               if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) manager.createNotificationChannel(
-                NotificationChannel("veylola_voice", "Veylola background voice", NotificationManager.IMPORTANCE_LOW).apply { description = "Keeps Veylola voice wake mode active" })
-              val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_UPDATE_CURRENT or if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0)
-              val notification: Notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) Notification.Builder(this, "veylola_voice").setContentTitle("Veylola Voice is active").setContentText("Wake-word mode is enabled. Tap to return to Veylola.").setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentIntent(open).setOngoing(true).build() else Notification.Builder(this).setContentTitle("Veylola Voice is active").setContentText("Wake-word mode is enabled").setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentIntent(open).setOngoing(true).build()
-              startForeground(2407, notification)
+                NotificationChannel("veylola_voice", "Veylola background voice", NotificationManager.IMPORTANCE_LOW).apply { description = "Shows when Veylola background listening is enabled" })
+              startForegroundCompat(buildNotification("Veylola Voice is active", "Wake-word listening is enabled. Tap to open the app."))
               startRecognition()
             }
+            private fun startForegroundCompat(notification: Notification) {
+              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(2407, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+              } else startForeground(2407, notification)
+            }
+            private fun buildNotification(title: String, text: String): Notification {
+              val open = PendingIntent.getActivity(this, 0,
+                Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+                PendingIntent.FLAG_UPDATE_CURRENT or if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0)
+              return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                Notification.Builder(this, "veylola_voice").setContentTitle(title).setContentText(text)
+                  .setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentIntent(open).setOngoing(true).build()
+              else Notification.Builder(this).setContentTitle(title).setContentText(text)
+                .setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentIntent(open).setOngoing(true).build()
+            }
             private fun startRecognition() {
-              if (stopped || !SpeechRecognizer.isRecognitionAvailable(this)) return
+              if (stopped) return
+              if (!SpeechRecognizer.isRecognitionAvailable(this)) { scheduleRetry(); return }
               try {
                 recognizer?.destroy()
                 recognizer = SpeechRecognizer.createSpeechRecognizer(this).also { it.setRecognitionListener(this) }
@@ -121,25 +151,36 @@ jobs:
                 recognizer?.startListening(intent)
               } catch (_: Exception) { scheduleRetry() }
             }
-            private fun scheduleRetry() { if (!stopped) handler.postDelayed({ startRecognition() }, 1200) }
-            override fun onResults(results: Bundle?) {
+            private fun scheduleRetry() {
+              if (stopped) return
+              retryCount = (retryCount + 1).coerceAtMost(10)
+              handler.removeCallbacksAndMessages(null)
+              handler.postDelayed({ startRecognition() }, (retryCount * 1200L).coerceAtMost(15000L))
+            }
+            private fun handleMatches(results: Bundle?) {
               val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
-              if (matches.any { it.lowercase(Locale.ROOT).contains("hey veylola") || it.lowercase(Locale.ROOT).contains("hey vey") }) {
-                val launch = Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                startActivity(launch)
-                stopRecognition()
-                handler.postDelayed({ if (!stopped) startRecognition() }, 5000)
+              val heardWakeWord = matches.any {
+                val spoken = it.lowercase(Locale.ROOT)
+                spoken.contains("hey veylola") || spoken.contains("hey vey")
+              }
+              if (heardWakeWord) {
+                retryCount = 0
+                getSystemService(NotificationManager::class.java).notify(2407,
+                  buildNotification("Veylola heard you", "Tap this notification to bring Veylola to the screen."))
+                try { recognizer?.cancel() } catch (_: Exception) {}
+                handler.postDelayed({ startRecognition() }, 2200)
               } else scheduleRetry()
             }
+            override fun onResults(results: Bundle?) = handleMatches(results)
             override fun onPartialResults(results: Bundle?) {
               val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
-              if (matches.any { it.lowercase(Locale.ROOT).contains("hey veylola") || it.lowercase(Locale.ROOT).contains("hey vey") }) {
-                startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
-                stopRecognition()
-                handler.postDelayed({ if (!stopped) startRecognition() }, 5000)
+              if (matches.any { val s = it.lowercase(Locale.ROOT); s.contains("hey veylola") || s.contains("hey vey") }) {
+                getSystemService(NotificationManager::class.java).notify(2407,
+                  buildNotification("Veylola heard you", "Tap this notification to bring Veylola to the screen."))
+                try { recognizer?.cancel() } catch (_: Exception) {}
+                handler.postDelayed({ startRecognition() }, 2200)
               }
             }
-            private fun stopRecognition() { try { recognizer?.stopListening() } catch (_: Exception) {} }
             override fun onReadyForSpeech(params: Bundle?) {}
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
@@ -147,19 +188,17 @@ jobs:
             override fun onEndOfSpeech() { scheduleRetry() }
             override fun onError(error: Int) { scheduleRetry() }
             override fun onEvent(eventType: Int, params: Bundle?) {}
-            override fun onDestroy() { stopped = true; handler.removeCallbacksAndMessages(null); recognizer?.destroy(); recognizer = null; super.onDestroy() }
+            override fun onDestroy() {
+              stopped = true
+              handler.removeCallbacksAndMessages(null)
+              try { recognizer?.cancel() } catch (_: Exception) {}
+              recognizer?.destroy()
+              recognizer = null
+              super.onDestroy()
+            }
             override fun onBind(intent: Intent?): IBinder? = null
           }
           EOF
-          python - <<'PY'
-          from pathlib import import Path
-          p = Path("android/app/src/main/AndroidManifest.xml")
-          s = p.read_text()
-          service = '    <service android:name=".WakeWordService" android:exported="false" android:foregroundServiceType="microphone" />'
-          if 'android:name=".WakeWordService"' not in s:
-              s = s.replace("</application>", service + "\\n</application>")
-          p.write_text(s)
-          PY
       - name: Get dependencies
         run: flutter pub get
       - name: Build APK
