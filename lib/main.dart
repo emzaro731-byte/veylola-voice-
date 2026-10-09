@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
@@ -36,7 +37,12 @@ class AssistantPage extends StatefulWidget {
   State<AssistantPage> createState() => _AssistantPageState();
 }
 
-class _AssistantPageState extends State<AssistantPage> {
+class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserver {
+  static const MethodChannel _backgroundChannel = MethodChannel('com.veylola.veylola_voice/background');
+  Future<void> _setBackgroundListening(bool enabled) async {
+    try { await _backgroundChannel.invokeMethod(enabled ? 'start' : 'stop'); }
+    catch (_) { if (mounted) _add('Background listening service could not start. Check microphone permission and rebuild the APK.', false); }
+  }
   final _input = TextEditingController();
   final _scroll = ScrollController();
   final _tts = FlutterTts();
@@ -52,6 +58,7 @@ class _AssistantPageState extends State<AssistantPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initVoice();
     _tts.setSpeechRate(0.47);
     _tts.setPitch(0.92);
@@ -80,6 +87,7 @@ class _AssistantPageState extends State<AssistantPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _input.dispose();
     _scroll.dispose();
     _speech.stop();
@@ -129,12 +137,21 @@ class _AssistantPageState extends State<AssistantPage> {
     );
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _wakeMode && !_speech.isListening) {
+      Future.delayed(const Duration(milliseconds: 700), () { if (mounted && _wakeMode && !_speech.isListening) _listen(); });
+    }
+  }
+
   Future<void> _toggleWake() async {
     setState(() => _wakeMode = !_wakeMode);
     if (_wakeMode) {
-      _add('Wake-word mode enabled while this app stays open. Say “Hey Veylola” followed by a command.', false);
+      await _setBackgroundListening(true);
+      _add('Background service requested. Android will show an ongoing notification. Wake-word detection may depend on Android speech-service and battery settings.', false);
       if (!_speech.isListening) await _listen();
     } else {
+      await _setBackgroundListening(false);
       await _speech.stop();
       setState(() { _listening = false; _status = 'READY'; });
       _add('Wake-word mode paused.', false);
