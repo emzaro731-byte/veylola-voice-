@@ -225,7 +225,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
       await _tts.stop(); local = 'Voice output stopped.';
     } else if (q.contains('clear chat')) {
       setState(() => _messages.clear()); local = 'Chat cleared.';
-    } else if (RegExp(r'\\b(call|phone|ring)\\s+(my\\s+)?(mum|mom|mummy|mother)\\b').hasMatch(q)) {
+    } else if (RegExp(r'\b(call|phone|ring)\s+(my\s+)?(mum|mom|mummy|mother)\b').hasMatch(q)) {
       local = await _callContact('mum');
     } else if (q.startsWith('call ') || q.startsWith('dial ')) {
       final number = text.replaceFirst(RegExp(r'^(call|dial)\s+', caseSensitive: false), '').trim();
