@@ -1,0 +1,49 @@
+name: Build Veylola Voice APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "lib/**"
+      - "pubspec.yaml"
+      - ".github/workflows/build-android-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate missing Android project files
+        run: |
+          if [ ! -f android/app/src/main/AndroidManifest.xml ]; then
+            flutter create --platforms=android --org com.veylola --project-name veylola_voice .
+          fi
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Check formatting and analyze
+        run: flutter analyze --no-pub
+        continue-on-error: true
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: veylola-voice-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
