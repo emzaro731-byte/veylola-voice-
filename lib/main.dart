@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -118,7 +119,7 @@ class _AssistantPageState extends State<AssistantPage> {
         if (words.isEmpty) return;
         if (_wakeMode && !words.toLowerCase().contains('hey veylola') &&
             !words.toLowerCase().contains('hey vey')) return;
-        final command = words.replaceFirst(RegExp(r'^(heys+veylola|heys+vey)s*[, ]*', caseSensitive: false), '').trim();
+        final command = words.replaceFirst(RegExp(r'^(hey\\s+veylola|hey\\s+vey)\\s*[, ]*', caseSensitive: false), '').trim();
         if (result.finalResult && command.isNotEmpty) {
           setState(() => _input.text = command);
           _handle(command);
@@ -181,21 +182,59 @@ class _AssistantPageState extends State<AssistantPage> {
   }
 
   Future<String> _openTarget(String target) async {
+    final appPackages = <String, String>{
+      'youtube': 'com.google.android.youtube',
+      'chrome': 'com.android.chrome',
+      'google maps': 'com.google.android.apps.maps',
+      'maps': 'com.google.android.apps.maps',
+      'phone': 'com.google.android.dialer',
+      'dialer': 'com.google.android.dialer',
+      'settings': 'com.android.settings',
+      'camera': 'com.android.camera2',
+      'calculator': 'com.google.android.calculator',
+      'gmail app': 'com.google.android.gm',
+      'whatsapp app': 'com.whatsapp',
+      'telegram app': 'org.telegram.messenger',
+    };
+    // Prefer an installed native app when a clear app command was used.
+    final appKey = appPackages.keys
+        .where((k) => target == k || target == 'the $k')
+        .firstWhere((_) => true, orElse: () => '');
+    if (appKey.isNotEmpty) {
+      try {
+        final intent = AndroidIntent(
+          action: 'android.intent.action.MAIN',
+          category: 'android.intent.category.LAUNCHER',
+          package: appPackages[appKey],
+        );
+        await intent.launch();
+        return 'Opening $appKey.';
+      } catch (_) {
+        return 'I could not launch $appKey. It may not be installed or Android may block the request.';
+      }
+    }
     final sites = <String, String>{
-      'youtube': 'https://youtube.com', 'google': 'https://google.com',
-      'gmail': 'https://mail.google.com', 'facebook': 'https://facebook.com',
-      'instagram': 'https://instagram.com', 'tiktok': 'https://tiktok.com',
-      'whatsapp': 'https://wa.me/', 'github': 'https://github.com',
+      'youtube': 'https://youtube.com',
+      'google': 'https://google.com',
+      'gmail': 'https://mail.google.com',
+      'facebook': 'https://facebook.com',
+      'instagram': 'https://instagram.com',
+      'tiktok': 'https://tiktok.com',
+      'whatsapp': 'https://wa.me/',
+      'github': 'https://github.com',
       'veylola shop': 'https://veylola-shop.onrender.com',
       'browser': 'https://google.com',
     };
     final key = sites.keys.firstWhere((k) => target.contains(k), orElse: () => '');
-    if (key.isEmpty) return 'I do not have an opening shortcut for $target yet. Try YouTube, Google, WhatsApp, Instagram, or GitHub.';
-    final uri = Uri.parse(sites[key]!);
+    if (key.isEmpty) {
+      return 'I do not have an opening shortcut for $target yet. Try Chrome, Camera, Settings, Calculator, Maps, YouTube, WhatsApp, or Instagram.';
+    }
     try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      await launchUrl(Uri.parse(sites[key]!), mode: LaunchMode.externalApplication);
       return 'Opening $key.';
-    } catch (_) { return 'I could not open $key on this phone.'; }
+    } catch (_) {
+      return 'I could not open $key on this phone.';
+    }
   }
 
   Future<String> _askAI(String message) async {
