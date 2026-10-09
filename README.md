@@ -7,8 +7,9 @@ Veylola Voice is a JARVIS-inspired assistant project with a Flutter Android app 
 The Flutter app includes:
 - Dark futuristic assistant interface
 - Speech recognition and spoken responses
-- Optional “Hey Veylola” wake phrase while the app is open and microphone listening is enabled
-- Starter commands for time, date, Google search, and opening supported websites
+- Optional “Hey Veylola” wake phrase; background service behavior depends on Android version, permissions, speech service, and battery policy
+- Starter commands for time, date, Google search, opening supported apps and websites, opening Wi-Fi/Bluetooth settings, and preparing calls/texts
+- Recent conversation history sent to the backend for contextual AI replies
 - Optional chat request to the Veylola backend
 
 ## Build an APK on GitHub
@@ -21,9 +22,17 @@ The Flutter app includes:
 
 A push to the Flutter app files also triggers the build workflow.
 
-## Voice and phone limitations
+## Voice commands
 
-Android will request microphone permission. Speech recognition availability depends on the phone's speech services and language settings. Wake-word listening works only while the app is open; Android may stop microphone use in the background. This starter app opens supported websites externally and cannot freely control every app, setting, or device function.
+Try these examples:
+- `open YouTube`, `open WhatsApp`, `open Settings`, or `open Camera`
+- `search weather tomorrow`
+- `call 08012345678` — opens the dialer with the number; the user must tap Call
+- `text 08012345678 I am on my way` — opens a message draft; the user must tap Send
+- `Wi-Fi settings` or `Bluetooth settings` — opens Android settings; the user changes the setting
+- `what time is it`, `what is today's date`, or `help`
+
+Android will request microphone permission. Speech recognition availability depends on the phone's speech services and language settings. The foreground service requests background wake-word listening, but Android versions, microphone permissions, manufacturer battery policies, speech-service behavior, and restrictions on launching apps from the background can prevent reliable always-on listening. This is not guaranteed to work like a system-level hotword assistant. The app cannot silently place calls, send texts, or freely change protected Android settings.
 
 ## AI connection
 
