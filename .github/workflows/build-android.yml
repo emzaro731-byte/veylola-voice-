@@ -61,9 +61,9 @@ jobs:
                           android:resource="@xml/veylola_accessibility_service" />
                   </service>'''
           if 'android:name=".WakeWordService"' not in s:
-              s = s.replace("</application>", service + "\\n</application>")
+              s = s.replace("</application>", service + "\n</application>")
           if 'android:name=".VeylolaAccessibilityService"' not in s:
-              s = s.replace("</application>", accessibility_service + "\\n</application>")
+              s = s.replace("</application>", accessibility_service + "\n</application>")
           p.write_text(s)
           config = Path("android/app/src/main/res/xml/veylola_accessibility_service.xml")
           config.parent.mkdir(parents=True, exist_ok=True)
@@ -75,12 +75,12 @@ jobs:
               android:notificationTimeout="100"
               android:canRetrieveWindowContent="false"
               android:canPerformGestures="false" />
-          """)
+          """.lstrip())
           strings = Path("android/app/src/main/res/values/strings.xml")
           st = strings.read_text()
           entry = '<string name="veylola_accessibility_description">Optional Veylola Voice accessibility service. Enable manually in Android Settings. This starter service does not read screen content or perform gestures.</string>'
           if 'name="veylola_accessibility_description"' not in st:
-              st = st.replace("</resources>", f"    {entry}\\n</resources>")
+              st = st.replace("</resources>", f"    {entry}\n</resources>")
           strings.write_text(st)
           PY
           mkdir -p android/app/src/main/kotlin/com/veylola/veylola_voice
