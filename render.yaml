@@ -8,8 +8,8 @@ services:
       - key: PYTHON_VERSION
         value: 3.12.7
       - key: AI_API_URL
-        sync: false
-      - key: AI_API_KEY
+        value: https://api.groq.com/openai/v1/chat/completions
+      - key: GROQ_API_KEY
         sync: false
       - key: AI_MODEL
-        sync: false
+        value: llama-3.3-70b-versatile
