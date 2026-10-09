@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:android_intent_plus/android_intent.dart';
@@ -37,7 +38,7 @@ class AssistantPage extends StatefulWidget {
   State<AssistantPage> createState() => _AssistantPageState();
 }
 
-class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserver {
+class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   static const MethodChannel _backgroundChannel = MethodChannel('com.veylola.veylola_voice/background');
   Future<void> _openBatteryProtectionSettings() async {
     try {
@@ -53,6 +54,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
     try { await _backgroundChannel.invokeMethod(enabled ? 'start' : 'stop'); }
     catch (_) { if (mounted) _add('Background listening service could not start. Check microphone permission and rebuild the APK.', false); }
   }
+  late final AnimationController _liquidController;
   final _input = TextEditingController();
   final _scroll = ScrollController();
   final _tts = FlutterTts();
@@ -69,6 +71,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _liquidController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600))..repeat(reverse: true);
     _initVoice();
     _tts.setSpeechRate(0.47);
     _tts.setPitch(0.92);
@@ -98,6 +101,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _liquidController.dispose();
     _input.dispose();
     _scroll.dispose();
     _speech.stop();
@@ -338,94 +342,271 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
 
   @override
   Widget build(BuildContext context) {
+    const cyan = Color(0xFF63D9FF);
+    const electricBlue = Color(0xFF286BFF);
+    const midnight = Color(0xFF030712);
     return Scaffold(
+      backgroundColor: midnight,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: midnight.withValues(alpha: 0.48),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         title: const Row(children: [
-          Icon(Icons.graphic_eq, color: Color(0xFF69D9FF)), SizedBox(width: 9),
-          Text('VEYLOLA VOICE', style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.bold)),
+          Icon(Icons.graphic_eq_rounded, color: cyan, size: 25),
+          SizedBox(width: 9),
+          Text('VEYLOLA', style: TextStyle(letterSpacing: 3, fontWeight: FontWeight.w800, fontSize: 17)),
+          SizedBox(width: 7),
+          Text('VOICE', style: TextStyle(letterSpacing: 2, color: cyan, fontSize: 12, fontWeight: FontWeight.w600)),
         ]),
         actions: [
           IconButton(
             tooltip: 'Allow background listening',
             onPressed: _openBatteryProtectionSettings,
-            icon: const Icon(Icons.battery_charging_full),
+            icon: const Icon(Icons.battery_charging_full_rounded, color: cyan),
           ),
           IconButton(
             tooltip: _wakeMode ? 'Pause wake word' : 'Enable wake word',
             onPressed: _toggleWake,
-            icon: Icon(_wakeMode ? Icons.hearing : Icons.hearing_disabled,
-              color: _wakeMode ? const Color(0xFF69D9FF) : null),
+            icon: Icon(_wakeMode ? Icons.hearing_rounded : Icons.hearing_disabled_rounded,
+              color: _wakeMode ? cyan : Colors.white70),
           ),
+          const SizedBox(width: 5),
         ],
       ),
-      body: SafeArea(child: Column(children: [
-        const SizedBox(height: 10),
-        Container(
-          width: 142, height: 142,
-          decoration: BoxDecoration(shape: BoxShape.circle,
-            gradient: const RadialGradient(colors: [Color(0xFF164C72), Color(0xFF091321), Color(0xFF070B14)]),
-            border: Border.all(color: const Color(0xFF69D9FF).withValues(alpha: 0.7), width: 2),
-            boxShadow: [BoxShadow(color: const Color(0xFF32C8FF).withValues(alpha: _listening ? 0.35 : 0.12), blurRadius: 32, spreadRadius: 5)],
+      body: Stack(children: [
+        const Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF08172D), midnight, Color(0xFF03050D)],
+            stops: [0, 0.48, 1],
           ),
-          child: Icon(_listening ? Icons.mic : Icons.memory, size: 64, color: const Color(0xFF8DE5FF)),
-        ),
-        const SizedBox(height: 10),
-        Text(_status, style: const TextStyle(color: Color(0xFF69D9FF), letterSpacing: 3, fontSize: 12)),
-        const SizedBox(height: 8),
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: Text('Voice commands • Smart actions • AI assistant',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 13))),
-        const SizedBox(height: 10),
-        Expanded(child: ListView.builder(
-          controller: _scroll, padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-          itemCount: _messages.length,
-          itemBuilder: (context, i) {
-            final item = _messages[i];
-            return Align(
-              alignment: item.isUser ? Alignment.centerRight : Alignment.centerLeft,
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 330),
-                margin: const EdgeInsets.symmetric(vertical: 5),
-                padding: const EdgeInsets.all(13),
+        ))),
+        Positioned(top: 80, left: -85, child: _GlowBlob(color: electricBlue.withValues(alpha: 0.18), size: 220)),
+        Positioned(top: 310, right: -105, child: _GlowBlob(color: cyan.withValues(alpha: 0.12), size: 250)),
+        SafeArea(child: Column(children: [
+          const SizedBox(height: 64),
+          AnimatedBuilder(
+            animation: _liquidController,
+            builder: (context, child) {
+              final t = _liquidController.value;
+              return Container(
+                width: 174 + (t * 8), height: 174 + (t * 8),
+                padding: const EdgeInsets.all(9),
                 decoration: BoxDecoration(
-                  color: item.isUser ? const Color(0xFF123B54) : const Color(0xFF121A29),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF69D9FF).withValues(alpha: 0.16)),
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    colors: [cyan.withValues(alpha: 0.72), electricBlue.withValues(alpha: 0.65), Colors.white.withValues(alpha: 0.12)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(color: cyan.withValues(alpha: (_listening ? 0.36 : 0.16) + t * 0.08), blurRadius: 34 + t * 12, spreadRadius: 1 + t * 3),
+                    BoxShadow(color: electricBlue.withValues(alpha: 0.2), blurRadius: 48, spreadRadius: 6),
+                  ],
                 ),
-                child: Text(item.text, style: const TextStyle(fontSize: 14, height: 1.4)),
-              ),
-            );
-          },
-        )),
-        if (_wakeMode)
-          const Padding(padding: EdgeInsets.only(bottom: 5), child: Text('Background wake-word mode is enabled', style: TextStyle(color: Color(0xFF69D9FF), fontSize: 11))),
-        Padding(padding: const EdgeInsets.fromLTRB(12, 6, 12, 12), child: Row(children: [
-          Expanded(child: TextField(
-            controller: _input,
-            textInputAction: TextInputAction.send,
-            onSubmitted: _handle,
-            decoration: InputDecoration(
-              hintText: 'Ask Veylola anything…',
-              filled: true, fillColor: const Color(0xFF121A29),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            ),
-          )),
-          const SizedBox(width: 8),
-          IconButton.filled(
-            onPressed: _busy ? null : () => _handle(_input.text),
-            icon: const Icon(Icons.arrow_upward),
+                child: ClipOval(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          center: Alignment(-0.35 - t * 0.12, -0.55),
+                          radius: 1.15,
+                          colors: [Colors.white.withValues(alpha: 0.25), cyan.withValues(alpha: 0.16), Color(0xFF061326).withValues(alpha: 0.94)],
+                        ),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.42), width: 1.2),
+                      ),
+                      child: Stack(alignment: Alignment.center, children: [
+                        Positioned(top: 17 + t * 7, left: 32 + t * 10,
+                          child: Container(width: 52, height: 20,
+                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(30))),
+                        ),
+                        Icon(_listening ? Icons.graphic_eq_rounded : Icons.memory_rounded, size: 66,
+                          color: _listening ? Colors.white : const Color(0xFF9BEAFF)),
+                        Positioned(bottom: 19, child: Container(width: 34, height: 3,
+                          decoration: BoxDecoration(color: cyan.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(4)))),
+                      ]),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-          const SizedBox(width: 4),
-          FloatingActionButton.small(
-            heroTag: 'mic',
-            onPressed: _listen,
-            backgroundColor: _listening ? const Color(0xFFFF6B6B) : const Color(0xFF69D9FF),
-            foregroundColor: const Color(0xFF07111C),
-            child: Icon(_listening ? Icons.stop : Icons.mic),
+          const SizedBox(height: 16),
+          Text(_status, style: const TextStyle(color: cyan, letterSpacing: 4, fontSize: 11, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 7),
+          Text('YOUR VOICE. YOUR ASSISTANT.', style: TextStyle(color: Colors.white.withValues(alpha: 0.62), fontSize: 10, letterSpacing: 2.0)),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(children: [
+              Expanded(child: _StatusPill(icon: Icons.auto_awesome_rounded, label: 'AI CORE', active: !_busy)),
+              const SizedBox(width: 8),
+              Expanded(child: _StatusPill(icon: Icons.mic_none_rounded, label: _wakeMode ? 'WAKE ON' : 'VOICE READY', active: _wakeMode || _ready)),
+              const SizedBox(width: 8),
+              Expanded(child: _StatusPill(icon: Icons.bolt_rounded, label: _busy ? 'THINKING' : 'ONLINE', active: !_busy)),
+            ]),
+          ),
+          const SizedBox(height: 14),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(25),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.045),
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(color: cyan.withValues(alpha: 0.16)),
+                    ),
+                    child: _messages.isEmpty
+                      ? Center(child: Text('Your conversation starts here', style: TextStyle(color: Colors.white.withValues(alpha: 0.45))))
+                      : ListView.builder(
+                          controller: _scroll,
+                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+                          itemCount: _messages.length,
+                          itemBuilder: (context, i) {
+                            final item = _messages[i];
+                            return Align(
+                              alignment: item.isUser ? Alignment.centerRight : Alignment.centerLeft,
+                              child: Container(
+                                constraints: const BoxConstraints(maxWidth: 310),
+                                margin: const EdgeInsets.symmetric(vertical: 5),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                decoration: BoxDecoration(
+                                  gradient: item.isUser
+                                    ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xCC1266A6), Color(0xAA143B79)])
+                                    : LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+                                        colors: [Colors.white.withValues(alpha: 0.105), Colors.white.withValues(alpha: 0.035)]),
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(18), topRight: const Radius.circular(18),
+                                    bottomLeft: Radius.circular(item.isUser ? 18 : 5),
+                                    bottomRight: Radius.circular(item.isUser ? 5 : 18),
+                                  ),
+                                  border: Border.all(color: (item.isUser ? cyan : Colors.white).withValues(alpha: 0.19)),
+                                  boxShadow: item.isUser ? [BoxShadow(color: electricBlue.withValues(alpha: 0.09), blurRadius: 15)] : null,
+                                ),
+                                child: Text(item.text, style: const TextStyle(fontSize: 13.5, height: 1.45, color: Color(0xFFF2F8FF))),
+                              ),
+                            );
+                          },
+                        ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (_wakeMode)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text('◉  BACKGROUND WAKE WORD ENABLED', style: TextStyle(color: cyan.withValues(alpha: 0.9), fontSize: 9, letterSpacing: 1.2)),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(30),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(6, 5, 6, 5),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.075),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: cyan.withValues(alpha: 0.25)),
+                    boxShadow: [BoxShadow(color: electricBlue.withValues(alpha: 0.09), blurRadius: 20)],
+                  ),
+                  child: Row(children: [
+                    const SizedBox(width: 8),
+                    Expanded(child: TextField(
+                      controller: _input,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: _handle,
+                      style: const TextStyle(fontSize: 14, color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Message Veylola…',
+                        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.43)),
+                        filled: false, border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+                      ),
+                    )),
+                    IconButton(
+                      onPressed: _busy ? null : () => _handle(_input.text),
+                      icon: const Icon(Icons.arrow_upward_rounded, color: cyan),
+                      style: IconButton.styleFrom(backgroundColor: cyan.withValues(alpha: 0.12)),
+                    ),
+                    const SizedBox(width: 4),
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(colors: _listening ? [const Color(0xFFFF7190), const Color(0xFFD72D61)] : [cyan, electricBlue]),
+                        boxShadow: [BoxShadow(color: (_listening ? const Color(0xFFFF7190) : cyan).withValues(alpha: 0.3), blurRadius: 16)],
+                      ),
+                      child: IconButton(
+                        onPressed: _listen,
+                        color: midnight,
+                        icon: Icon(_listening ? Icons.stop_rounded : Icons.mic_rounded),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ]),
+                ),
+              ),
+            ),
           ),
         ])),
-      ])),
+      ]),
+    );
+  }
+}
+
+class _GlowBlob extends StatelessWidget {
+  const _GlowBlob({required this.color, required this.size});
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: Container(
+      width: size, height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
+      ),
+    ),
+  );
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.icon, required this.label, required this.active});
+  final IconData icon;
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active ? const Color(0xFF63D9FF) : Colors.white54;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 7),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.055),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
+          ),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 5),
+            Flexible(child: Text(label, overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 8.5, letterSpacing: 0.7, color: color, fontWeight: FontWeight.w700))),
+          ]),
+        ),
+      ),
     );
   }
 }
