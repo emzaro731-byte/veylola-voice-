@@ -15,7 +15,7 @@ class VeylolaApp extends StatelessWidget {
   const VeylolaApp({super.key});
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Veylola Voice',
+    title: 'Seri Voice',
     debugShowCheckedModeBanner: false,
     theme: ThemeData.dark().copyWith(
       scaffoldBackgroundColor: const Color(0xFF070B14),
@@ -69,7 +69,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
   final _tts = FlutterTts();
   final _speech = stt.SpeechToText();
   final List<ChatLine> _messages = [
-    ChatLine('Veylola online. Tap the microphone and say “Hey Veylola”, or type a command.', false),
+    ChatLine('Seri is ready. Tap the microphone and say “Hey Seri”, or type a command.', false),
   ];
   bool _ready = false, _listening = false, _busy = false, _wakeMode = false;
   String _status = 'READY';
@@ -214,8 +214,8 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
     final q = text.toLowerCase();
     setState(() { _busy = true; _status = 'THINKING'; });
     String? local;
-    if (RegExp(r'\b(hello|hi|hey)\b').hasMatch(q)) local = 'Hello. Veylola is ready to help.';
-    else if (q.contains('your name')) local = 'I am Veylola Voice, your personal assistant.';
+    if (RegExp(r'\b(hello|hi|hey)\b').hasMatch(q)) local = 'Hello. Seri is ready to help.';
+    else if (q.contains('your name')) local = 'I am Seri, your personal voice assistant.';
     else if (q.contains('time')) local = 'The time is ${TimeOfDay.now().format(context)}.';
     else if (q.contains('date') || q.contains('day is it')) {
       final d = DateTime.now();
@@ -360,11 +360,24 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
                 'content': line.text,
               }).toList(),
         }),
-      ).timeout(const Duration(seconds: 18));
+      ).timeout(const Duration(seconds: 40));
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
         final reply = data['reply'] ?? data['response'] ?? data['message'];
-        if (reply is String && reply.trim().isNotEmpty) return reply.trim();
+        final mode = data['mode'];
+        if (mounted) {
+          setState(() {
+            _serverReachable = true;
+            if (mode == 'online') _onlineAIConfigured = true;
+            if (mode == 'fallback') _onlineAIConfigured = false;
+          });
+        }
+        if (reply is String && reply.trim().isNotEmpty) {
+          if (mode == 'fallback') {
+            return '${reply.trim()}\\n\\nOnline AI is not responding right now, so this answer came from Seri’s built-in fallback.';
+          }
+          return reply.trim();
+        }
       }
     } catch (_) {}
     await _checkServer();
@@ -388,11 +401,16 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
         title: const Row(children: [
           Icon(Icons.graphic_eq_rounded, color: cyan, size: 25),
           SizedBox(width: 9),
-          Text('VEYLOLA', style: TextStyle(letterSpacing: 3, fontWeight: FontWeight.w800, fontSize: 17)),
+          Text('SERI', style: TextStyle(letterSpacing: 3, fontWeight: FontWeight.w800, fontSize: 17)),
           SizedBox(width: 7),
           Text('VOICE', style: TextStyle(letterSpacing: 2, color: cyan, fontSize: 12, fontWeight: FontWeight.w600)),
         ]),
         actions: [
+          IconButton(
+            tooltip: 'Refresh server status',
+            onPressed: _checkServer,
+            icon: const Icon(Icons.sync_rounded, color: cyan),
+          ),
           IconButton(
             tooltip: 'Allow background listening',
             onPressed: _openBatteryProtectionSettings,
@@ -483,7 +501,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
               const SizedBox(width: 8),
               Expanded(child: _StatusPill(icon: Icons.mic_none_rounded, label: _wakeMode ? 'WAKE ON' : 'VOICE READY', active: _wakeMode || _ready)),
               const SizedBox(width: 8),
-              Expanded(child: _StatusPill(icon: Icons.bolt_rounded, label: _busy ? 'THINKING' : 'ONLINE', active: !_busy)),
+              Expanded(child: _StatusPill(icon: Icons.bolt_rounded, label: _busy ? 'THINKING' : (_serverReachable ? 'SERVER READY' : 'OFFLINE'), active: !_busy && _serverReachable)),
             ]),
           ),
           const SizedBox(height: 14),
@@ -564,7 +582,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
                       onSubmitted: _handle,
                       style: const TextStyle(fontSize: 14, color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: 'Message Veylola…',
+                        hintText: 'Message Seri…',
                         hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.43)),
                         filled: false, border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
