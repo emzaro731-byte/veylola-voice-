@@ -64,7 +64,7 @@ jobs:
           service = '    <service android:name=".WakeWordService" android:exported="false" android:foregroundServiceType="microphone" />'
           accessibility_service = '''    <service
                       android:name=".VeylolaAccessibilityService"
-                      android:label="Veylola Voice"
+                      android:label="Seri Voice"
                       android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
                       android:exported="true">
                       <intent-filter>
