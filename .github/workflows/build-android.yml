@@ -112,6 +112,7 @@ jobs:
           import io.flutter.plugin.common.MethodChannel
           class MainActivity: FlutterActivity() {
             private var pendingCallResult: MethodChannel.Result? = null
+            private var pendingStartResult: MethodChannel.Result? = null
             private var pendingContactName: String = "mum"
             override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
               super.configureFlutterEngine(flutterEngine)
@@ -129,9 +130,15 @@ jobs:
                       }
                     }
                     "start" -> {
-                      val intent = Intent(this, WakeWordService::class.java)
-                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
-                      result.success(true)
+                      val needed = mutableListOf(Manifest.permission.RECORD_AUDIO)
+                      if (Build.VERSION.SDK_INT >= 33) needed.add(Manifest.permission.POST_NOTIFICATIONS)
+                      val missing = needed.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+                      if (missing.isNotEmpty()) {
+                        pendingStartResult = result
+                        requestPermissions(missing.toTypedArray(), 9043)
+                      } else {
+                        startWakeWordService(result)
+                      }
                     }
                     "stop" -> { stopService(Intent(this, WakeWordService::class.java)); result.success(true) }
                     "batterySettings" -> {
@@ -155,6 +162,17 @@ jobs:
             }
             override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
               super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+              if (requestCode == 9043) {
+                val result = pendingStartResult
+                pendingStartResult = null
+                if (result == null) return
+                if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                  startWakeWordService(result)
+                } else {
+                  result.error("VOICE_PERMISSION_DENIED", "Microphone permission is required; allow notifications so Android can show the background-listening indicator.", null)
+                }
+                return
+              }
               if (requestCode != 9042) return
               val result = pendingCallResult
               pendingCallResult = null
@@ -163,6 +181,15 @@ jobs:
                 callSavedContact(pendingContactName, result)
               } else {
                 result.error("CALL_PERMISSION_DENIED", "Contacts and Phone permissions are required.", null)
+              }
+            }
+            private fun startWakeWordService(result: MethodChannel.Result) {
+              try {
+                val intent = Intent(this, WakeWordService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
+                result.success(true)
+              } catch (e: Exception) {
+                result.error("BACKGROUND_SERVICE_FAILED", e.message, null)
               }
             }
             private fun callSavedContact(searchName: String, result: MethodChannel.Result) {
