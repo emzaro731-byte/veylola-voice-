@@ -7,9 +7,14 @@ import requests
 app = Flask(__name__)
 CORS(app)
 
-AI_API_URL = os.getenv("AI_API_URL", "").strip()
-AI_API_KEY = os.getenv("AI_API_KEY", "").strip()
-AI_MODEL = os.getenv("AI_MODEL", "").strip()
+# Groq uses an OpenAI-compatible Chat Completions endpoint.
+# Keep the API key on Render only; never put it in the Flutter app or GitHub.
+AI_API_URL = os.getenv(
+    "AI_API_URL",
+    "https://api.groq.com/openai/v1/chat/completions",
+).strip()
+AI_API_KEY = os.getenv("GROQ_API_KEY", os.getenv("AI_API_KEY", "")).strip()
+AI_MODEL = os.getenv("AI_MODEL", "llama-3.3-70b-versatile").strip()
 
 def local_reply(message):
     text = message.lower().strip()
@@ -35,7 +40,12 @@ def home():
 
 @app.get("/health")
 def health():
-    return jsonify({"status": "ok", "online_ai_configured": bool(AI_API_URL and AI_API_KEY and AI_MODEL)})
+    return jsonify({
+        "status": "ok",
+        "online_ai_configured": bool(AI_API_URL and AI_API_KEY and AI_MODEL),
+        "provider": "groq" if "groq.com" in AI_API_URL.lower() else "openai-compatible",
+        "model": AI_MODEL if AI_API_KEY else None,
+    })
 
 @app.post("/api/chat")
 def chat():
