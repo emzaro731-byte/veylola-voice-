@@ -258,7 +258,13 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
     try {
       final response = await http.post(Uri.parse(aiEndpoint),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'message': message}),
+        body: jsonEncode({
+          'message': message,
+          'history': _messages.take(_messages.length > 10 ? _messages.length - 10 : 0).toList().map((line) => {
+            'role': line.isUser ? 'user' : 'assistant',
+            'content': line.text,
+          }).toList(),
+        }),
       ).timeout(const Duration(seconds: 18));
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
