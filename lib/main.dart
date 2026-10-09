@@ -40,6 +40,15 @@ class AssistantPage extends StatefulWidget {
 
 class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   static const MethodChannel _backgroundChannel = MethodChannel('com.veylola.veylola_voice/background');
+  Future<void> _openAccessibilitySettings() async {
+    try {
+      await _backgroundChannel.invokeMethod('accessibilitySettings');
+      if (mounted) _add('Android Accessibility settings opened. Select Veylola Voice and turn it on only if you want to grant this service access. Android requires you to enable it yourself.', false);
+    } catch (_) {
+      if (mounted) _add('Open Android Settings > Accessibility > Downloaded apps/Installed services > Veylola Voice, then enable it yourself if you choose.', false);
+    }
+  }
+
   Future<void> _openBatteryProtectionSettings() async {
     try {
       await _backgroundChannel.invokeMethod('batterySettings');
@@ -364,6 +373,11 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
             tooltip: 'Allow background listening',
             onPressed: _openBatteryProtectionSettings,
             icon: const Icon(Icons.battery_charging_full_rounded, color: cyan),
+          ),
+          IconButton(
+            tooltip: 'Accessibility settings',
+            onPressed: _openAccessibilitySettings,
+            icon: const Icon(Icons.accessibility_new_rounded, color: cyan),
           ),
           IconButton(
             tooltip: _wakeMode ? 'Pause wake word' : 'Enable wake word',
