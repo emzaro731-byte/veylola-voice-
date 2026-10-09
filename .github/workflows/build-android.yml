@@ -49,6 +49,8 @@ jobs:
           s = p.read_text()
           permissions = [
               "android.permission.INTERNET",
+              "android.permission.READ_CONTACTS",
+              "android.permission.CALL_PHONE",
               "android.permission.RECORD_AUDIO",
               "android.permission.POST_NOTIFICATIONS",
               "android.permission.FOREGROUND_SERVICE",
@@ -98,19 +100,34 @@ jobs:
           mkdir -p android/app/src/main/kotlin/com/veylola/veylola_voice
           cat > android/app/src/main/kotlin/com/veylola/veylola_voice/MainActivity.kt <<'EOF'
           package com.veylola.veylola_voice
+          import android.Manifest
           import android.content.Intent
+          import android.content.pm.PackageManager
           import android.net.Uri
           import android.os.Build
           import android.provider.Settings
+          import android.provider.ContactsContract
           import io.flutter.embedding.android.FlutterActivity
           import io.flutter.embedding.engine.FlutterEngine
           import io.flutter.plugin.common.MethodChannel
           class MainActivity: FlutterActivity() {
+            private var pendingCallResult: MethodChannel.Result? = null
+            private var pendingContactName: String = "mum"
             override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
               super.configureFlutterEngine(flutterEngine)
               MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.veylola.veylola_voice/background").setMethodCallHandler { call, result ->
                 try {
                   when (call.method) {
+                    "callContact" -> {
+                      pendingContactName = call.argument<String>("name") ?: "mum"
+                      val needed = arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.CALL_PHONE)
+                      if (needed.any { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }) {
+                        pendingCallResult = result
+                        requestPermissions(needed, 9042)
+                      } else {
+                        callSavedContact(pendingContactName, result)
+                      }
+                    }
                     "start" -> {
                       val intent = Intent(this, WakeWordService::class.java)
                       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
@@ -134,6 +151,59 @@ jobs:
                     else -> result.notImplemented()
                   }
                 } catch (e: Exception) { result.error("ANDROID_ACTION_FAILED", e.message, null) }
+              }
+            }
+            override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+              super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+              if (requestCode != 9042) return
+              val result = pendingCallResult
+              pendingCallResult = null
+              if (result == null) return
+              if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                callSavedContact(pendingContactName, result)
+              } else {
+                result.error("CALL_PERMISSION_DENIED", "Contacts and Phone permissions are required.", null)
+              }
+            }
+            private fun callSavedContact(searchName: String, result: MethodChannel.Result) {
+              val projection = arrayOf(
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                ContactsContract.CommonDataKinds.Phone.NUMBER
+              )
+              var bestName: String? = null
+              var bestNumber: String? = null
+              var bestScore = 99
+              contentResolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, projection, null, null, null)?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                val numberIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                while (cursor.moveToNext()) {
+                  if (nameIndex < 0 || numberIndex < 0) continue
+                  val contactName = cursor.getString(nameIndex) ?: continue
+                  val normalized = contactName.lowercase().trim()
+                  val score = when (normalized) {
+                    "mum", "mom", "mummy", "mother" -> 0
+                    else -> if (normalized.contains("mum") || normalized.contains("mom") ||
+                      normalized.contains("mummy") || normalized.contains("mother")) 1 else 99
+                  }
+                  if (score < bestScore) {
+                    bestScore = score
+                    bestName = contactName
+                    bestNumber = cursor.getString(numberIndex)
+                    if (score == 0) break
+                  }
+                }
+              }
+              val number = bestNumber
+              val contactName = bestName
+              if (number.isNullOrBlank() || contactName.isNullOrBlank()) {
+                result.error("CONTACT_NOT_FOUND", "No Mum, Mom, Mummy, or Mother contact was found.", null)
+                return
+              }
+              try {
+                startActivity(Intent(Intent.ACTION_CALL, Uri.fromParts("tel", number, null)))
+                result.success("Calling $contactName now.")
+              } catch (e: Exception) {
+                result.error("CALL_FAILED", e.message, null)
               }
             }
           }
