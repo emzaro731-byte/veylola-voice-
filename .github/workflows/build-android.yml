@@ -1,4 +1,4 @@
-name: Build Veylola Voice APK
+name: Build Seri Voice APK
 
 on:
   workflow_dispatch:
@@ -6,6 +6,8 @@ on:
     paths:
       - 'lib/**'
       - 'pubspec.yaml'
+      - 'app.py'
+      - 'render.yaml'
       - '.github/workflows/build-android.yml'
 
 permissions:
@@ -215,12 +217,12 @@ jobs:
               val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
               val heardWakeWord = matches.any {
                 val spoken = it.lowercase(Locale.ROOT)
-                spoken.contains("hey veylola") || spoken.contains("hey vey")
+                spoken.contains("hey seri") || spoken.contains("hey veylola") || spoken.contains("hey vey")
               }
               if (heardWakeWord) {
                 retryCount = 0
                 getSystemService(NotificationManager::class.java).notify(2407,
-                  buildNotification("Veylola heard you", "Tap this notification to bring Veylola to the screen."))
+                  buildNotification("Seri heard you", "Tap this notification to bring Seri to the screen."))
                 try { recognizer?.cancel() } catch (_: Exception) {}
                 handler.postDelayed({ startRecognition() }, 2200)
               } else scheduleRetry()
@@ -228,7 +230,7 @@ jobs:
             override fun onResults(results: Bundle?) = handleMatches(results)
             override fun onPartialResults(results: Bundle?) {
               val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
-              if (matches.any { val s = it.lowercase(Locale.ROOT); s.contains("hey veylola") || s.contains("hey vey") }) {
+              if (matches.any { val s = it.lowercase(Locale.ROOT); s.contains("hey seri") || s.contains("hey veylola") || s.contains("hey vey") }) {
                 getSystemService(NotificationManager::class.java).notify(2407,
                   buildNotification("Veylola heard you", "Tap this notification to bring Veylola to the screen."))
                 try { recognizer?.cancel() } catch (_: Exception) {}
@@ -255,11 +257,17 @@ jobs:
           EOF
       - name: Get dependencies
         run: flutter pub get
+      - name: Check Dart formatting
+        run: dart format --output=none --set-exit-if-changed lib
+      - name: Analyze Flutter app
+        run: flutter analyze --no-pub
+      - name: Validate Python backend syntax
+        run: python -m py_compile app.py
       - name: Build APK
         run: flutter build apk --release
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: veylola-voice-release-apk
+          name: seri-voice-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
