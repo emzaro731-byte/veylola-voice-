@@ -48,9 +48,40 @@ jobs:
               if line not in s:
                   s = s.replace("<application", f"    {line}\n    <application", 1)
           service = '    <service android:name=".WakeWordService" android:exported="false" android:foregroundServiceType="microphone" />'
+          accessibility_service = '''    <service
+                      android:name=".VeylolaAccessibilityService"
+                      android:label="Veylola Voice"
+                      android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.accessibilityservice.AccessibilityService" />
+                      </intent-filter>
+                      <meta-data
+                          android:name="android.accessibilityservice"
+                          android:resource="@xml/veylola_accessibility_service" />
+                  </service>'''
           if 'android:name=".WakeWordService"' not in s:
-              s = s.replace("</application>", service + "\n</application>")
+              s = s.replace("</application>", service + "\\n</application>")
+          if 'android:name=".VeylolaAccessibilityService"' not in s:
+              s = s.replace("</application>", accessibility_service + "\\n</application>")
           p.write_text(s)
+          config = Path("android/app/src/main/res/xml/veylola_accessibility_service.xml")
+          config.parent.mkdir(parents=True, exist_ok=True)
+          config.write_text("""<?xml version="1.0" encoding="utf-8"?>
+          <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+              android:description="@string/veylola_accessibility_description"
+              android:accessibilityEventTypes="typeWindowStateChanged"
+              android:accessibilityFeedbackType="feedbackGeneric"
+              android:notificationTimeout="100"
+              android:canRetrieveWindowContent="false"
+              android:canPerformGestures="false" />
+          """)
+          strings = Path("android/app/src/main/res/values/strings.xml")
+          st = strings.read_text()
+          entry = '<string name="veylola_accessibility_description">Optional Veylola Voice accessibility service. Enable manually in Android Settings. This starter service does not read screen content or perform gestures.</string>'
+          if 'name="veylola_accessibility_description"' not in st:
+              st = st.replace("</resources>", f"    {entry}\\n</resources>")
+          strings.write_text(st)
           PY
           mkdir -p android/app/src/main/kotlin/com/veylola/veylola_voice
           cat > android/app/src/main/kotlin/com/veylola/veylola_voice/MainActivity.kt <<'EOF'
@@ -84,10 +115,31 @@ jobs:
                       startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + packageName)))
                       result.success(true)
                     }
+                    "accessibilitySettings" -> {
+                      startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                      result.success(true)
+                    }
                     else -> result.notImplemented()
                   }
                 } catch (e: Exception) { result.error("ANDROID_ACTION_FAILED", e.message, null) }
               }
+            }
+          }
+          EOF
+          cat > android/app/src/main/kotlin/com/veylola/veylola_voice/VeylolaAccessibilityService.kt <<'EOF'
+          package com.veylola.veylola_voice
+          import android.accessibilityservice.AccessibilityService
+          import android.view.accessibility.AccessibilityEvent
+          /**
+           * Minimal opt-in accessibility-service scaffold.
+           * It intentionally does not inspect screen text, click controls, or perform gestures.
+           */
+          class VeylolaAccessibilityService : AccessibilityService() {
+            override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+              // Reserved for explicitly user-requested accessibility features.
+            }
+            override fun onInterrupt() {
+              // Nothing to interrupt in this minimal scaffold.
             }
           }
           EOF
