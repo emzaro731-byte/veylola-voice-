@@ -73,8 +73,11 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
   ];
   bool _ready = false, _listening = false, _busy = false, _wakeMode = false;
   String _status = 'READY';
-  // Optional: set this to your deployed Veylola backend URL.
-  static const String aiEndpoint = 'https://veylola-voice-api.onrender.com/api/chat';
+  // Production Render endpoint. The app connects automatically; no manual Settings entry is needed.
+  static const String apiBaseUrl = 'https://seri-muob.onrender.com';
+  static const String aiEndpoint = '$apiBaseUrl/api/chat';
+  bool _serverReachable = false;
+  bool _onlineAIConfigured = false;
 
   @override
   void initState() {
@@ -82,8 +85,26 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
     WidgetsBinding.instance.addObserver(this);
     _liquidController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600))..repeat(reverse: true);
     _initVoice();
+    _checkServer();
     _tts.setSpeechRate(0.47);
     _tts.setPitch(0.92);
+  }
+
+  Future<void> _checkServer() async {
+    try {
+      final response = await http.get(Uri.parse('$apiBaseUrl/health'))
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (!mounted) return;
+        setState(() {
+          _serverReachable = true;
+          _onlineAIConfigured = data is Map && data['online_ai_configured'] == true;
+        });
+        return;
+      }
+    } catch (_) {}
+    if (mounted) setState(() { _serverReachable = false; _onlineAIConfigured = false; });
   }
 
   Future<void> _initVoice() async {
@@ -346,7 +367,10 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
         if (reply is String && reply.trim().isNotEmpty) return reply.trim();
       }
     } catch (_) {}
-    return 'I can handle basic commands, but my AI brain is not connected right now. Deploy the Veylola backend and configure its AI provider to answer general questions.';
+    await _checkServer();
+    return _serverReachable
+        ? 'Seri reached the Render server, but the chat request failed. Check the server logs and AI provider settings on Render.'
+        : 'Seri could not reach its Render server. Check your internet connection or open https://seri-muob.onrender.com/health to test the server.';
   }
 
   @override
@@ -455,7 +479,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(children: [
-              Expanded(child: _StatusPill(icon: Icons.auto_awesome_rounded, label: 'AI CORE', active: !_busy)),
+              Expanded(child: _StatusPill(icon: Icons.auto_awesome_rounded, label: _onlineAIConfigured ? 'AI CONNECTED' : (_serverReachable ? 'SERVER ONLINE' : 'CONNECTING'), active: _onlineAIConfigured || _serverReachable)),
               const SizedBox(width: 8),
               Expanded(child: _StatusPill(icon: Icons.mic_none_rounded, label: _wakeMode ? 'WAKE ON' : 'VOICE READY', active: _wakeMode || _ready)),
               const SizedBox(width: 8),
