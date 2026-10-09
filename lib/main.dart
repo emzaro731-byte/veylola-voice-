@@ -308,10 +308,13 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'message': message,
-          'history': _messages.take(_messages.length > 10 ? _messages.length - 10 : 0).toList().map((line) => {
-            'role': line.isUser ? 'user' : 'assistant',
-            'content': line.text,
-          }).toList(),
+          'history': _messages.length <= 1 ? <Map<String, String>>[] :
+            _messages.sublist(0, _messages.length - 1)
+              .skip(_messages.length > 11 ? _messages.length - 11 : 0)
+              .map((line) => <String, String>{
+                'role': line.isUser ? 'user' : 'assistant',
+                'content': line.text,
+              }).toList(),
         }),
       ).timeout(const Duration(seconds: 18));
       if (response.statusCode >= 200 && response.statusCode < 300) {
