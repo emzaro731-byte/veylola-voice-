@@ -237,7 +237,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
     } else if (q.contains('bluetooth settings') || q == 'turn on bluetooth' || q == 'turn off bluetooth') {
       local = await _openSystemSettings('android.settings.BLUETOOTH_SETTINGS', 'Bluetooth settings');
     } else if (q == 'help' || q.contains('what commands') || q.contains('what can you do')) {
-      local = 'Try: “open YouTube”, “open Settings”, “search football news”, “call 080…”, “text 080… hello”, “Wi-Fi settings”, “Bluetooth settings”, “what time is it”, or ask me a question. Calls and texts open a screen for you to review; I do not send them automatically.';
+      local = 'Try: “open YouTube”, “open Settings”, “search football news”, “call my mum”, “call 080…”, “text 080… hello”, “Wi-Fi settings”, “Bluetooth settings”, “what time is it”, or ask me a question. Calls and texts open a screen for you to review; I do not send them automatically.';
     } else if (q.startsWith('open ') || q.startsWith('launch ')) {
       final target = q.replaceFirst(RegExp(r'^(open|launch)\s+'), '').trim();
       local = await _openTarget(target);
