@@ -181,10 +181,10 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
     } else if (q.contains('clear chat')) {
       setState(() => _messages.clear()); local = 'Chat cleared.';
     } else if (q.startsWith('call ') || q.startsWith('dial ')) {
-      final number = text.replaceFirst(RegExp(r'^(call|dial)\\s+', caseSensitive: false), '').trim();
+      final number = text.replaceFirst(RegExp(r'^(call|dial)\s+', caseSensitive: false), '').trim();
       local = await _openDialer(number);
     } else if (q.startsWith('text ') || q.startsWith('message ')) {
-      local = await _composeText(text.replaceFirst(RegExp(r'^(text|message)\\s+', caseSensitive: false), '').trim());
+      local = await _composeText(text.replaceFirst(RegExp(r'^(text|message)\s+', caseSensitive: false), '').trim());
     } else if (q.contains('wifi settings') || q.contains('wi-fi settings') || q == 'turn on wifi' || q == 'turn off wifi') {
       local = await _openSystemSettings('android.settings.WIFI_SETTINGS', 'Wi-Fi settings');
     } else if (q.contains('bluetooth settings') || q == 'turn on bluetooth' || q == 'turn off bluetooth') {
@@ -192,7 +192,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
     } else if (q == 'help' || q.contains('what commands') || q.contains('what can you do')) {
       local = 'Try: “open YouTube”, “open Settings”, “search football news”, “call 080…”, “text 080… hello”, “Wi-Fi settings”, “Bluetooth settings”, “what time is it”, or ask me a question. Calls and texts open a screen for you to review; I do not send them automatically.';
     } else if (q.startsWith('open ') || q.startsWith('launch ')) {
-      final target = q.replaceFirst(RegExp(r'^(open|launch)\\s+'), '').trim();
+      final target = q.replaceFirst(RegExp(r'^(open|launch)\s+'), '').trim();
       local = await _openTarget(target);
     } else if (q.startsWith('search ')) {
       final term = text.substring(7).trim();
@@ -221,7 +221,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
   }
 
   Future<String> _composeText(String details) async {
-    final match = RegExp(r'^([+0-9][0-9 +()-]{2,})\\s+(.+)').firstMatch(details);
+    final match = RegExp(r'^([+0-9][0-9 +()-]{2,})\s+(.+)').firstMatch(details);
     if (match == null) return 'Use “text phone-number message”, for example: text 08012345678 I am on my way.';
     final number = match.group(1)!.replaceAll(RegExp(r'[^0-9+]'), '');
     final message = match.group(2)!.trim();
