@@ -1,24 +1,34 @@
 # Veylola Voice
 
-A mobile-friendly, voice-first assistant web prototype.
+Veylola Voice is a JARVIS-inspired assistant project with a Flutter Android app and an earlier browser prototype.
 
-## Features
-- Responsive dark interface with animated listening orb
-- Browser speech recognition when supported
-- Spoken replies using the browser's text-to-speech engine
-- Text chat and a few starter commands (greetings, date, time, motivation)
-- No API key required for this starter demo
+## Flutter Android app
 
-## Run locally
-Because microphone access is restricted by many browsers on plain HTTP, use HTTPS when deployed. You can also open `index.html` locally, although speech recognition support may vary.
+The Flutter app includes:
+- Dark futuristic assistant interface
+- Speech recognition and spoken responses
+- Optional “Hey Veylola” wake phrase while the app is open and microphone listening is enabled
+- Starter commands for time, date, Google search, and opening supported websites
+- Optional chat request to the Veylola backend
 
-This is a static site: deploy the repository with GitHub Pages, or use any static hosting provider.
+## Build an APK on GitHub
 
-## Important limitations
-This version does **not** yet connect to a real AI model. Unknown questions receive a clear placeholder reply. Browser speech recognition may rely on an online service and requires microphone permission. It is not an always-listening wake-word assistant, and a web page cannot freely launch other phone apps.
+1. Open the repository's **Actions** tab.
+2. Select **Build Veylola Voice APK**.
+3. Tap **Run workflow** and wait for the workflow to finish.
+4. Open the successful workflow run and download the **vey­lola-voice-release-apk** artifact.
+5. Extract the ZIP and install `app-release.apk` on your Android phone.
 
-## Connect an AI backend next
-Create a server endpoint such as `POST /api/chat` that accepts `{ "message": "..." }` and returns `{ "reply": "..." }`. Then update the `respond()` function in `index.html` to call that endpoint. Keep private API keys on the server, never inside browser JavaScript.
+A push to the Flutter app files also triggers the build workflow.
 
-## License
-Choose a license before distributing this project.
+## Voice and phone limitations
+
+Android will request microphone permission. Speech recognition availability depends on the phone's speech services and language settings. Wake-word listening works only while the app is open; Android may stop microphone use in the background. This starter app opens supported websites externally and cannot freely control every app, setting, or device function.
+
+## AI connection
+
+The app currently attempts to call `https://veylola-voice-api.onrender.com/api/chat`. The backend must be deployed and return JSON such as `{"reply":"Hello"}`. Configure private AI credentials on the backend, never in the Flutter app. If the endpoint is unavailable, basic commands still work and the app explains that its AI brain is not connected.
+
+## Web prototype
+
+The original `index.html` browser prototype is still included.
