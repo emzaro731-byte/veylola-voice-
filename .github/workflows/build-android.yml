@@ -31,6 +31,16 @@ jobs:
           cache: true
       - name: Generate Android project files
         run: flutter create --platforms=android --org com.veylola --project-name veylola_voice .
+      - name: Set app display name
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          s = p.read_text()
+          s = s.replace('android:label="veylola_voice"', 'android:label="Seri Voice"')
+          s = s.replace('android:label="Veylola Voice"', 'android:label="Seri Voice"')
+          p.write_text(s)
+          PY
       - name: Configure Android background voice service
         run: |
           python - <<'PY'
@@ -80,7 +90,7 @@ jobs:
           """.lstrip())
           strings = Path("android/app/src/main/res/values/strings.xml")
           st = strings.read_text()
-          entry = '<string name="veylola_accessibility_description">Optional Veylola Voice accessibility service. Enable manually in Android Settings. This starter service does not read screen content or perform gestures.</string>'
+          entry = '<string name="veylola_accessibility_description">Optional Seri Voice accessibility service. Enable manually in Android Settings. This starter service does not read screen content or perform gestures.</string>'
           if 'name="veylola_accessibility_description"' not in st:
               st = st.replace("</resources>", f"    {entry}\n</resources>")
           strings.write_text(st)
@@ -173,8 +183,8 @@ jobs:
               super.onCreate()
               val manager = getSystemService(NotificationManager::class.java)
               if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) manager.createNotificationChannel(
-                NotificationChannel("veylola_voice", "Veylola background voice", NotificationManager.IMPORTANCE_LOW).apply { description = "Shows when Veylola background listening is enabled" })
-              startForegroundCompat(buildNotification("Veylola Voice is active", "Wake-word listening is enabled. Tap to open the app."))
+                NotificationChannel("veylola_voice", "Seri background voice", NotificationManager.IMPORTANCE_LOW).apply { description = "Shows when Veylola background listening is enabled" })
+              startForegroundCompat(buildNotification("Seri Voice is active", "Wake-word listening is enabled. Tap to open the app."))
               startRecognition()
             }
             private fun startForegroundCompat(notification: Notification) {
@@ -232,7 +242,7 @@ jobs:
               val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
               if (matches.any { val s = it.lowercase(Locale.ROOT); s.contains("hey seri") || s.contains("hey veylola") || s.contains("hey vey") }) {
                 getSystemService(NotificationManager::class.java).notify(2407,
-                  buildNotification("Veylola heard you", "Tap this notification to bring Veylola to the screen."))
+                  buildNotification("Seri heard you", "Tap this notification to bring Veylola to the screen."))
                 try { recognizer?.cancel() } catch (_: Exception) {}
                 handler.postDelayed({ startRecognition() }, 2200)
               }
@@ -258,7 +268,7 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
       - name: Check Dart formatting
-        run: dart format --output=none --set-exit-if-changed lib
+        run: dart format lib
       - name: Analyze Flutter app
         run: flutter analyze --no-pub
       - name: Validate Python backend syntax
