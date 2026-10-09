@@ -169,7 +169,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
         if (!mounted) return;
         final words = result.recognizedWords.trim();
         if (words.isEmpty) return;
-        if (_wakeMode && !!words.toLowerCase().contains('hey seri') &&
+        if (_wakeMode && !words.toLowerCase().contains('hey seri') &&
             !words.toLowerCase().contains('hey veylola') &&
             !words.toLowerCase().contains('hey vey')) return;
         final command = words.replaceFirst(RegExp(r'^(hey\s+seri|hey\s+veylola|hey\s+vey)\s*[, ]*', caseSensitive: false), '').trim();
@@ -375,7 +375,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
         }
         if (reply is String && reply.trim().isNotEmpty) {
           if (mode == 'fallback') {
-            return '${reply.trim()}\\n\\nOnline AI is not responding right now, so this answer came from Seri’s built-in fallback.';
+            return '${reply.trim()}\n\nOnline AI is not responding right now, so this answer came from Seri’s built-in fallback.';
           }
           return reply.trim();
         }
