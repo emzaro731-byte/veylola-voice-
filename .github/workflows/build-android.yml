@@ -31,7 +31,24 @@ jobs:
         run: flutter create --platforms=android --org com.veylola --project-name veylola_voice .
       - name: Add Android permissions
         run: |
-          sed -i '/<application/i\    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />' android/app/src/main/AndroidManifest.xml
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          s = p.read_text()
+          permissions = [
+              "android.permission.INTERNET",
+              "android.permission.RECORD_AUDIO",
+              "android.permission.POST_NOTIFICATIONS",
+              "android.permission.FOREGROUND_SERVICE",
+              "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+              "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+          ]
+          for permission in permissions:
+              line = f'<uses-permission android:name="{permission}" />'
+              if line not in s:
+                  s = s.replace("<application", f"    {line}\\n    <application", 1)
+          p.write_text(s)
+          PY
       - name: Install Android foreground voice service
         run: |
           mkdir -p android/app/src/main/kotlin/com/veylola/veylola_voice
@@ -135,12 +152,12 @@ jobs:
           }
           EOF
           python - <<'PY'
-          from pathlib import Path
-          p=Path("android/app/src/main/AndroidManifest.xml")
-          s=p.read_text()
-          s=s.replace('<uses-permission android:name="android.permission.RECORD_AUDIO" />', '<uses-permission android:name="android.permission.RECORD_AUDIO" />\\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />')
-          s=s.replace('<application', '<application')
-          s=s.replace('</application>', '    <service android:name=".WakeWordService" android:exported="false" android:foregroundServiceType="microphone" />\\n    </application>')
+          from pathlib import import Path
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          s = p.read_text()
+          service = '    <service android:name=".WakeWordService" android:exported="false" android:foregroundServiceType="microphone" />'
+          if 'android:name=".WakeWordService"' not in s:
+              s = s.replace("</application>", service + "\\n</application>")
           p.write_text(s)
           PY
       - name: Get dependencies
