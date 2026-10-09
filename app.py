@@ -32,7 +32,7 @@ def local_reply(message):
         return "Fun fact: octopuses have three hearts."
     if "what can you do" in text or "help" in text:
         return "I can chat, answer simple built-in questions, and speak replies aloud. Configure an AI-compatible endpoint to enable broader online AI answers."
-    return "I'm in fallback mode right now, so I can only answer simple built-in questions. Configure AI_API_URL, AI_API_KEY, and AI_MODEL on the server for online AI answers."
+    return "I'm in fallback mode right now, so I can only answer simple built-in questions. Configure GROQ_API_KEY, AI_API_URL, and AI_MODEL on the server for online AI answers."
 
 @app.get("/")
 def home():
