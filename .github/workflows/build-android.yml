@@ -38,7 +38,7 @@ jobs:
           p = Path("android/app/src/main/AndroidManifest.xml")
           s = p.read_text()
           s = s.replace('android:label="veylola_voice"', 'android:label="Seri Voice"')
-          s = s.replace('android:label="Veylola Voice"', 'android:label="Seri Voice"')
+          s = s.replace('android:label="Seri Voice"', 'android:label="Seri Voice"')
           p.write_text(s)
           PY
       - name: Configure Android background voice service
