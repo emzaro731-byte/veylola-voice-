@@ -20,7 +20,6 @@ class VeylolaApp extends StatelessWidget {
     theme: ThemeData.dark().copyWith(
       scaffoldBackgroundColor: const Color(0xFF070B14),
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF69D9FF), brightness: Brightness.dark),
-      useMaterial3: true,
     ),
     home: const AssistantPage(),
   );
