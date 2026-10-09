@@ -36,7 +36,7 @@ def local_reply(message):
 
 @app.get("/")
 def home():
-    return jsonify({"app": "Veylola Voice API", "status": "ok"})
+    return jsonify({"app": "Seri Voice API", "status": "ok"})
 
 @app.get("/health")
 def health():
