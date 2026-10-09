@@ -149,7 +149,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
     if (_wakeMode) {
       await _setBackgroundListening(true);
       _add('Background service requested. Android will show an ongoing notification. Wake-word detection may depend on Android speech-service and battery settings.', false);
-      if (!_speech.isListening) await _listen();
+      // Native Android foreground service listens for the wake phrase while the app is backgrounded.
     } else {
       await _setBackgroundListening(false);
       await _speech.stop();
@@ -326,7 +326,7 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
           },
         )),
         if (_wakeMode)
-          const Padding(padding: EdgeInsets.only(bottom: 5), child: Text('Keep the app open for wake-word listening', style: TextStyle(color: Color(0xFF69D9FF), fontSize: 11))),
+          const Padding(padding: EdgeInsets.only(bottom: 5), child: Text('Background wake-word mode is enabled', style: TextStyle(color: Color(0xFF69D9FF), fontSize: 11))),
         Padding(padding: const EdgeInsets.fromLTRB(12, 6, 12, 12), child: Row(children: [
           Expanded(child: TextField(
             controller: _input,
