@@ -7,7 +7,7 @@ Veylola Voice is a JARVIS-inspired assistant project with a Flutter Android app 
 The Flutter app includes:
 - Dark futuristic assistant interface
 - Speech recognition and spoken responses
-- Optional “Hey Veylola” wake phrase; background service behavior depends on Android version, permissions, speech service, and battery policy
+- Optional “Hey Veylola” wake phrase using an Android microphone foreground service, restart retries, a persistent notification, and a user-approved battery-optimization exemption request
 - Starter commands for time, date, Google search, opening supported apps and websites, opening Wi-Fi/Bluetooth settings, and preparing calls/texts
 - Recent conversation history sent to the backend for contextual AI replies
 - Optional chat request to the Veylola backend
@@ -32,7 +32,7 @@ Try these examples:
 - `Wi-Fi settings` or `Bluetooth settings` — opens Android settings; the user changes the setting
 - `what time is it`, `what is today's date`, or `help`
 
-Android will request microphone permission. Speech recognition availability depends on the phone's speech services and language settings. The foreground service requests background wake-word listening, but Android versions, microphone permissions, manufacturer battery policies, speech-service behavior, and restrictions on launching apps from the background can prevent reliable always-on listening. This is not guaranteed to work like a system-level hotword assistant. The app cannot silently place calls, send texts, or freely change protected Android settings.
+Android will request microphone permission. Speech recognition availability depends on the phone's speech services and language settings. The foreground service uses Android's microphone foreground-service type, retry backoff, and a persistent notification. Use the battery icon in the app to open Android's battery-optimization exemption prompt; you must approve it yourself. On some devices, also open Settings > Apps > Veylola Voice > Battery and choose Unrestricted, allow notifications and microphone access, and allow background activity if offered. If Android detects the wake phrase while the app is backgrounded, Veylola posts a notification for you to tap; Android can block an app from forcibly bringing itself to the foreground. The OS, speech service, manufacturer power manager, force-stop state, or revoked permissions can still stop listening. This cannot be guaranteed to behave like a built-in system hotword assistant. The app cannot silently place calls, send texts, or freely change protected Android settings.
 
 ## AI connection
 
