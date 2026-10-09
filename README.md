@@ -40,7 +40,7 @@ Never put the Groq key in Flutter code, GitHub files, or screenshots. Keep it in
 A successful chat response contains reply and mode (online or fallback). If the AI provider is unavailable, the API returns a built-in fallback answer instead of exposing credentials or crashing.
 
 ## Android permissions and safety
-Android requires the user to grant microphone permission. Background listening depends on Android's speech services, notification permission, battery management, and manufacturer-specific restrictions; continuous wake-word operation cannot be guaranteed. The app cannot silently bypass Android protections. Calls open the dialer for review, and texts open a draft for the user to send. Wi-Fi and Bluetooth commands open the relevant settings rather than changing protected settings invisibly.
+Android requires the user to grant microphone permission. Background listening depends on Android's speech services, notification permission, battery management, and manufacturer-specific restrictions; continuous wake-word operation cannot be guaranteed. The app cannot silently bypass Android protections. Saying “call my mum” (or “call mum/mom/mummy/mother”) looks up a matching saved contact and starts the call after you grant Contacts and Phone permissions. Calls to a number still open the dialer for review, and texts open a draft for the user to send. Wi-Fi and Bluetooth commands open the relevant settings rather than changing protected settings invisibly.
 
 ## Web prototype
 The original index.html browser prototype remains in the repository.
