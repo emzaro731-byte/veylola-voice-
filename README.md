@@ -7,6 +7,7 @@ Veylola Voice is a JARVIS-inspired assistant project with a Flutter Android app 
 The Flutter app includes:
 - Dark futuristic assistant interface
 - Speech recognition and spoken responses
+- Optional Accessibility Service scaffold with a shortcut to Android Accessibility settings; it must be enabled manually and does not read screen content or perform gestures
 - Optional “Hey Veylola” wake phrase using an Android microphone foreground service, restart retries, a persistent notification, and a user-approved battery-optimization exemption request
 - Starter commands for time, date, Google search, opening supported apps and websites, opening Wi-Fi/Bluetooth settings, and preparing calls/texts
 - Recent conversation history sent to the backend for contextual AI replies
@@ -21,6 +22,10 @@ The Flutter app includes:
 5. Extract the ZIP and install `app-release.apk` on your Android phone.
 
 A push to the Flutter app files also triggers the build workflow.
+
+## Optional Accessibility Service
+
+Tap the accessibility-person icon in the app bar to open Android's Accessibility settings. Find **Veylola Voice** under Downloaded apps or Installed services and enable it yourself if you choose. Android will show its own confirmation. This starter service intentionally does not read screen content, click controls, or perform gestures, and it cannot be silently made the default. Only enable accessibility services you trust.
 
 ## Voice commands
 
