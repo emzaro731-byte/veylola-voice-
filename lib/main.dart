@@ -39,6 +39,16 @@ class AssistantPage extends StatefulWidget {
 
 class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserver {
   static const MethodChannel _backgroundChannel = MethodChannel('com.veylola.veylola_voice/background');
+  Future<void> _openBatteryProtectionSettings() async {
+    try {
+      await _backgroundChannel.invokeMethod('batterySettings');
+      if (mounted) _add('Android will ask whether Veylola may ignore battery optimization. Approve only if you want background listening; this still cannot override every system restriction.', false);
+    } catch (_) {
+      try { await _backgroundChannel.invokeMethod('appSettings'); }
+      catch (_) { if (mounted) _add('Open Android Settings > Apps > Veylola Voice > Battery and choose Unrestricted if your phone offers it.', false); }
+    }
+  }
+
   Future<void> _setBackgroundListening(bool enabled) async {
     try { await _backgroundChannel.invokeMethod(enabled ? 'start' : 'stop'); }
     catch (_) { if (mounted) _add('Background listening service could not start. Check microphone permission and rebuild the APK.', false); }
@@ -335,6 +345,11 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
           Text('VEYLOLA VOICE', style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.bold)),
         ]),
         actions: [
+          IconButton(
+            tooltip: 'Allow background listening',
+            onPressed: _openBatteryProtectionSettings,
+            icon: const Icon(Icons.battery_charging_full),
+          ),
           IconButton(
             tooltip: _wakeMode ? 'Pause wake word' : 'Enable wake word',
             onPressed: _toggleWake,
