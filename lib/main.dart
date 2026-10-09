@@ -192,9 +192,9 @@ class _AssistantPageState extends State<AssistantPage> {
       'settings': 'com.android.settings',
       'camera': 'com.android.camera2',
       'calculator': 'com.google.android.calculator',
-      'gmail app': 'com.google.android.gm',
-      'whatsapp app': 'com.whatsapp',
-      'telegram app': 'org.telegram.messenger',
+      'gmail': 'com.google.android.gm',
+      'whatsapp': 'com.whatsapp',
+      'telegram': 'org.telegram.messenger',
     };
     // Prefer an installed native app when a clear app command was used.
     final appKey = appPackages.keys
