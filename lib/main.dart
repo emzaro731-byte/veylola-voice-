@@ -119,7 +119,7 @@ class _AssistantPageState extends State<AssistantPage> {
         if (words.isEmpty) return;
         if (_wakeMode && !words.toLowerCase().contains('hey veylola') &&
             !words.toLowerCase().contains('hey vey')) return;
-        final command = words.replaceFirst(RegExp(r'^(hey\\s+veylola|hey\\s+vey)\\s*[, ]*', caseSensitive: false), '').trim();
+        final command = words.replaceFirst(RegExp(r'^(hey\s+veylola|hey\s+vey)\s*[, ]*', caseSensitive: false), '').trim();
         if (result.finalResult && command.isNotEmpty) {
           setState(() => _input.text = command);
           _handle(command);
