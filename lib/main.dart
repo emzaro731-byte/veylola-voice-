@@ -225,6 +225,8 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
       await _tts.stop(); local = 'Voice output stopped.';
     } else if (q.contains('clear chat')) {
       setState(() => _messages.clear()); local = 'Chat cleared.';
+    } else if (RegExp(r'\\b(call|phone|ring)\\s+(my\\s+)?(mum|mom|mummy|mother)\\b').hasMatch(q)) {
+      local = await _callContact('mum');
     } else if (q.startsWith('call ') || q.startsWith('dial ')) {
       final number = text.replaceFirst(RegExp(r'^(call|dial)\s+', caseSensitive: false), '').trim();
       local = await _openDialer(number);
@@ -252,6 +254,26 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
       await _speak(local);
     }
     if (mounted) setState(() { _busy = false; _status = _wakeMode ? 'WAKE WORD ACTIVE' : 'READY'; });
+  }
+
+  Future<String> _callContact(String name) async {
+    try {
+      final result = await _backgroundChannel.invokeMethod<String>(
+        'callContact',
+        <String, String>{'name': name},
+      );
+      return result ?? 'The phone app did not confirm the call.';
+    } on PlatformException catch (error) {
+      if (error.code == 'CONTACT_NOT_FOUND') {
+        return 'I could not find a Mum, Mom, Mummy, or Mother contact. Save that person in your contacts and try again.';
+      }
+      if (error.code == 'CALL_PERMISSION_DENIED') {
+        return 'Seri needs Contacts and Phone permission to call your mum. Allow those permissions, then say “call my mum” again.';
+      }
+      return 'I could not start the call. Check the contact and Phone permission in Android settings.';
+    } catch (_) {
+      return 'This build does not have the contact-calling feature enabled yet. Rebuild the latest Seri APK.';
+    }
   }
 
   Future<String> _openDialer(String number) async {
