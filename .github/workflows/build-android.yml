@@ -29,6 +29,9 @@ jobs:
           cache: true
       - name: Generate Android project files
         run: flutter create --platforms=android --org com.veylola --project-name veylola_voice .
+      - name: Add Android permissions
+        run: |
+          sed -i '/<application/i\    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />' android/app/src/main/AndroidManifest.xml
       - name: Get dependencies
         run: flutter pub get
       - name: Build APK
