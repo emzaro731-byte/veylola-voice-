@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Veylola Voice</string>
+    <string name="veylola_accessibility_description">Optional Veylola Voice accessibility service. Enable manually in Android Settings. This starter service does not read screen content or perform gestures.</string>
+</resources>
