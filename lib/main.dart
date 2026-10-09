@@ -169,9 +169,10 @@ class _AssistantPageState extends State<AssistantPage> with WidgetsBindingObserv
         if (!mounted) return;
         final words = result.recognizedWords.trim();
         if (words.isEmpty) return;
-        if (_wakeMode && !words.toLowerCase().contains('hey veylola') &&
+        if (_wakeMode && !!words.toLowerCase().contains('hey seri') &&
+            !words.toLowerCase().contains('hey veylola') &&
             !words.toLowerCase().contains('hey vey')) return;
-        final command = words.replaceFirst(RegExp(r'^(hey\s+veylola|hey\s+vey)\s*[, ]*', caseSensitive: false), '').trim();
+        final command = words.replaceFirst(RegExp(r'^(hey\s+seri|hey\s+veylola|hey\s+vey)\s*[, ]*', caseSensitive: false), '').trim();
         if (result.finalResult && command.isNotEmpty) {
           setState(() => _input.text = command);
           _handle(command);
