@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: veylola-voice-api
+    name: seri-muob
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
